@@ -4,13 +4,16 @@ import dbProcs.Getter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.ServletException;
@@ -54,7 +57,9 @@ public class BrokenCryptoHomeMade extends HttpServlet {
       new String("9e5ed059b23632c8801d95621fa52071b2eb211d8c044dde6d2f4b89874a7bc4");
   private static final long serialVersionUID = 1L;
   public static String userNameKey = randomKeyLengthString();
-  private static String serverEncryptionKey = randomKeyLengthString();
+  // Raw random bytes. Converting random bytes to a US-ASCII String collapsed every byte above 127
+  // to '?', which made the derived keys predictable
+  private static final byte[] serverEncryptionKey = Hash.randomKeyBytes();
   private static String encryptionKeySalt = randomKeyLengthString();
   private static final Logger log = LogManager.getLogger(BrokenCryptoHomeMade.class);
   public static List<List<String>> challenges = new ArrayList<List<String>>();
@@ -249,22 +254,19 @@ public class BrokenCryptoHomeMade extends HttpServlet {
   }
 
   /**
-   * Merges current server encryption key with user name based encryption key to create user
-   * specific key
+   * Derives a user specific AES key from the secret server key with HMAC-SHA256. The key can't be
+   * worked out from user names or from the solutions shown for other challenges
    *
    * @param userNameKey
-   * @return
+   * @return 16 byte AES key
    */
-  private static String createUserSpecificEncryptionKey(String userNameKey) throws Exception {
+  private static byte[] createUserSpecificEncryptionKey(String userNameKey) throws Exception {
     if (userNameKey.length() != 16) {
       throw new Exception("User Name key must be 16 bytes long");
     } else {
-      byte[] serverKey = serverEncryptionKey.getBytes();
-      byte[] userKey = userNameKey.getBytes();
-      for (int i = 0; i < userKey.length; i++) {
-        userKey[i] = (byte) (userKey[i] + serverKey[i]);
-      }
-      return new String(userKey, Charset.forName("US-ASCII"));
+      Mac hmac = Mac.getInstance("HmacSHA256");
+      hmac.init(new SecretKeySpec(serverEncryptionKey, "HmacSHA256"));
+      return Arrays.copyOf(hmac.doFinal(userNameKey.getBytes(StandardCharsets.UTF_8)), 16);
     }
   }
 
@@ -308,8 +310,7 @@ public class BrokenCryptoHomeMade extends HttpServlet {
   public static String decryptUserSpecificSolution(String userNameKey, String encryptedSolution)
       throws GeneralSecurityException, Exception {
     try {
-      String key = createUserSpecificEncryptionKey(userNameKey);
-      byte[] raw = key.getBytes(Charset.forName("US-ASCII"));
+      byte[] raw = createUserSpecificEncryptionKey(userNameKey);
       if (raw.length != 16) {
         throw new IllegalArgumentException("Invalid key size.");
       }
@@ -332,7 +333,18 @@ public class BrokenCryptoHomeMade extends HttpServlet {
    * @throws GeneralSecurityException
    */
   public static String encrypt(String key, String value) throws GeneralSecurityException {
-    byte[] raw = key.getBytes(Charset.forName("US-ASCII"));
+    return encrypt(key.getBytes(Charset.forName("US-ASCII")), value);
+  }
+
+  /**
+   * Encrypts plain text into cipher text based on a raw encryption key
+   *
+   * @param raw Encryption Key (Must be 16 Bytes)
+   * @param value Plain text to encrypt
+   * @return Cipher text based on plain text and key submitted
+   * @throws GeneralSecurityException
+   */
+  public static String encrypt(byte[] raw, String value) throws GeneralSecurityException {
     if (raw.length != 16) {
       throw new IllegalArgumentException("Invalid key size.");
     }
@@ -377,7 +389,7 @@ public class BrokenCryptoHomeMade extends HttpServlet {
     String toReturn = "Key Should be here! Please refresh the home page and try again!";
 
     try {
-      String key = createUserSpecificEncryptionKey(Validate.validateEncryptionKey(userSalt));
+      byte[] key = createUserSpecificEncryptionKey(Validate.validateEncryptionKey(userSalt));
       String forLog = BrokenCryptoHomeMade.encrypt(key, baseKey + getCurrentSalt());
       toReturn =
           "<script>prepTooltips();prepClipboardEvents();</script>"
@@ -409,7 +421,7 @@ public class BrokenCryptoHomeMade extends HttpServlet {
     String forLog = "Key Should be here! Please refresh the home page and try again!";
 
     try {
-      String key = createUserSpecificEncryptionKey(Validate.validateEncryptionKey(userSalt));
+      byte[] key = createUserSpecificEncryptionKey(Validate.validateEncryptionKey(userSalt));
       forLog = BrokenCryptoHomeMade.encrypt(key, baseKey + getCurrentSalt());
 
       log.debug("Returning: " + forLog);

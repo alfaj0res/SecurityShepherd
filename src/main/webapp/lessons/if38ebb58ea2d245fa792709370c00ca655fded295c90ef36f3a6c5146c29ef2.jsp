@@ -94,7 +94,7 @@
 			value="<%= bundle.getString("button.showIntro") %>" id="showLesson"
 			style="display: none;" /> <br /> <br />
 		<%= bundle.getString("challenge.description") %>
-		<br /> <br /> <a>YmFzZTY0aXNOb3RFbmNyeXB0aW9uQmFzZTY0aXNFbmNvZGluZ0Jhc2U2NEhpZGVzTm90aGluZ0Zyb21Zb3U=</a>
+		<br /> <br /> <a><%= Hash.encryptWithServerKey(Getter.getModuleResultFromHash(getServletContext().getRealPath(""), LEVEL_HASH)) %></a>
 		</p>
 	</div>
 	<script>			

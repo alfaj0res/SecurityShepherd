@@ -84,9 +84,19 @@ public class CsrfLesson extends HttpServlet {
           log.debug("User Submitted - " + messageForAdmin);
 
           String htmlOutput = new String();
+          // The lesson target requires the victim's anti-CSRF token. The simulated admin's token is
+          // a server-side secret that is never disclosed, so a forged URL can't carry it.
+          String adminToken = (String) ses.getAttribute("csrfLessonAdminToken");
+          if (adminToken == null) {
+            adminToken = Hash.randomString();
+            ses.setAttribute("csrfLessonAdminToken", adminToken);
+          }
           boolean validLessonAttack =
               FindXSS.findCsrfAttackUrl(
-                  messageForAdmin, "/root/grantComplete/csrflesson", "userId", falseId);
+                  messageForAdmin,
+                  "/root/grantComplete/csrflesson",
+                  "userId",
+                  falseId + "&csrfToken=" + adminToken);
 
           if (validLessonAttack) {
             htmlOutput =

@@ -12,7 +12,6 @@ import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.owasp.encoder.Encode;
-import utils.Hash;
 import utils.ShepherdLogManager;
 import utils.Validate;
 
@@ -75,15 +74,11 @@ public class DirectObjectLesson extends HttpServlet {
         String ApplicationRoot = getServletContext().getRealPath("");
         log.debug("Servlet root = " + ApplicationRoot);
         String htmlOutput = new String();
+        // Players use this lesson as the guest user, so only the guest profile is theirs to view.
+        // Requests for any other profile (including admin) are treated as not found.
         if (userName.equalsIgnoreCase("guest")) {
           log.debug("Guest Profile Found");
           htmlOutput = htmlGuest(bundle);
-        } else if (userName.equalsIgnoreCase("admin")) {
-          // Get key and add it to the output
-          String userKey =
-              Hash.generateUserSolution(levelResult, (String) ses.getAttribute("userName"));
-          log.debug("Admin Profile Found");
-          htmlOutput = htmlAdmin(bundle, userKey);
         } else {
           log.debug("No Profile Found");
 

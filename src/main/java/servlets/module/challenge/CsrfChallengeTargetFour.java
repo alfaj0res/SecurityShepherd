@@ -103,9 +103,8 @@ public class CsrfChallengeTargetFour extends HttpServlet {
         log.debug("storedCsrf Token is - '" + storedToken + "'");
 
         if (!userId.equals(plusId)) {
-          if (validCsrfToken(ApplicationRoot, csrfToken)) // Poor CSRF Validation Method
-          {
-            log.debug("'Valid' Nonce Value Submitted");
+          if (validCsrfToken(ApplicationRoot, userId, csrfToken)) {
+            log.debug("Valid Nonce Value Submitted");
             String userName = (String) ses.getAttribute("userName");
             String attackerName = Getter.getUserName(ApplicationRoot, plusId);
             if (attackerName != null) {
@@ -139,15 +138,15 @@ public class CsrfChallengeTargetFour extends HttpServlet {
   }
 
   /**
-   * CSRF Validator that checks if user submitted CSRF token is in the DB. This function does not
-   * filter the CSRF table for CSRF tokens belonging to the user submitting the request. It will
-   * return true as long as the token exists in the database, regardless of who owns the token
+   * CSRF Validator that checks if user submitted CSRF token is the token stored in the DB for the
+   * user submitting the request. Tokens belonging to other users are rejected.
    *
    * @param ApplicationRoot Running context of the application
+   * @param userId Identifier of the user submitting the request (from the session)
    * @param csrfToken CSRF Token value to search DB for
    * @return Returns true if the CSRF Token is Deemed valid
    */
-  private static boolean validCsrfToken(String ApplicationRoot, String csrfToken) {
+  private static boolean validCsrfToken(String ApplicationRoot, String userId, String csrfToken) {
     log.debug("*** CSRF4.validCsrfToken ***");
     boolean result = false;
     Connection conn;
@@ -157,11 +156,12 @@ public class CsrfChallengeTargetFour extends HttpServlet {
 
       PreparedStatement prepstmt =
           conn.prepareStatement(
-              "SELECT count(csrfTokenscol) FROM csrfTokens WHERE csrfTokenscol = ?");
+              "SELECT count(csrfTokenscol) FROM csrfTokens WHERE csrfTokenscol = ? AND userId = ?");
       prepstmt.setString(1, csrfToken);
+      prepstmt.setString(2, userId);
       ResultSet rs = prepstmt.executeQuery();
-      result = rs.next(); // If there is a row then the CSRF token was in the DB. Therefore CSRF
-      // Validated
+      // The token is valid only if it is stored for the requesting user
+      result = rs.next() && rs.getInt(1) > 0;
       Database.closeConnection(conn);
 
     } catch (SQLException e) {

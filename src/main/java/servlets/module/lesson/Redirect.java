@@ -37,6 +37,20 @@ public class Redirect extends HttpServlet {
   private static final long serialVersionUID = 1L;
   private static final Logger log = LogManager.getLogger(Redirect.class);
 
+  /**
+   * Redirect destinations are restricted to relative paths on this site. Absolute URLs, protocol
+   * relative URLs ("//host") and anything carrying a scheme are refused.
+   *
+   * @param to The requested redirect destination
+   * @return True if the destination is a local relative path
+   */
+  public static boolean isSafeRedirect(String to) {
+    if (to == null || !to.startsWith("/") || to.startsWith("//") || to.startsWith("/\\")) {
+      return false;
+    }
+    return !to.contains(":");
+  }
+
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     // Setting IpAddress To Log and taking header for original IP if forwarded from proxy

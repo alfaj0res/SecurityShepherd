@@ -13,6 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.owasp.encoder.Encode;
 import utils.FindXSS;
 import utils.Hash;
 import utils.ShepherdLogManager;
@@ -76,6 +77,7 @@ public class XssLesson extends HttpServlet {
         if (Validate.validateTokens(tokenCookie, tokenParmeter)) {
           String searchTerm = request.getParameter("searchTerm");
           log.debug("User Submitted - " + searchTerm);
+          searchTerm = Encode.forHtml(searchTerm);
           String htmlOutput = new String();
           if (FindXSS.search(searchTerm)) {
             log.debug("XSS Lesson Completed!");

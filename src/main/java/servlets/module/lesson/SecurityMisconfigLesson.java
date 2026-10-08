@@ -43,6 +43,9 @@ public class SecurityMisconfigLesson extends HttpServlet {
       "fe04648f43cdf2d523ecf1675f1ade2cde04a7a2e9a7f1a80dbb6dc9f717c833";
   private static String levelResult =
       "55b34717d014a5a355f6eced4386878fab0b2793e1d1dbfd23e6262cd510ea96";
+  // The default admin password has been replaced with a random secret generated at start up. It is
+  // not stored or displayed anywhere, so the default credentials no longer work.
+  private static final String adminPassword = Hash.randomString();
 
   public void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
@@ -70,7 +73,7 @@ public class SecurityMisconfigLesson extends HttpServlet {
         log.debug("User Name - " + userName);
         String userPass = request.getParameter("userPass");
         log.debug("User Pass - " + userName);
-        boolean loggedIn = userName.contentEquals("admin") && userPass.contentEquals("password");
+        boolean loggedIn = userName.contentEquals("admin") && userPass.contentEquals(adminPassword);
         String htmlOutput = new String();
         if (!loggedIn) {
           if (userName.contentEquals("admin")) {

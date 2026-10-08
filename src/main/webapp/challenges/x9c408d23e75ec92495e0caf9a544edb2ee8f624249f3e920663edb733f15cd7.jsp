@@ -26,6 +26,7 @@
  */
 
  String levelName =  "Insecure Cryptographic Storage Challenge 1";
+ String levelHash = "x9c408d23e75ec92495e0caf9a544edb2ee8f624249f3e920663edb733f15cd7";
  
  //Translation Stuff
  Locale locale = new Locale(Validate.validateLanguage(request.getSession()));
@@ -73,9 +74,7 @@
 		<h2 class="title"><%= i18nLevelName %></h2>
 		<p>
 			<%= bundle.getString("insecureCryptoStorage.1.whatToDo") %>
-			<br /> <br /> <a>Ymj wjxzqy pjd ktw ymnx qjxxts nx ymj ktqqtbnsl
-				xywnsl;
-				rdqtajqdmtwxjwzssnslymwtzlmymjknjqibmjwjfwjdtzltnslbnymdtzwgnlf</a>
+			<br /> <br /> <a><%= Hash.encryptWithServerKey(Getter.getModuleResultFromHash(getServletContext().getRealPath(""), levelHash)) %></a>
 		</p>
 	</div>
 	<script>			

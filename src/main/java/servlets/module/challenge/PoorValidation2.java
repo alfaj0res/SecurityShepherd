@@ -126,7 +126,11 @@ public class PoorValidation2 extends HttpServlet {
     }
   }
 
-  private static int validateAmount(int amount) {
+  private static int validateAmount(int amount) throws IllegalArgumentException {
+    // Upper bound stops the cost calculations overflowing into negative totals
+    if (amount > 9000) {
+      throw new IllegalArgumentException();
+    }
     if (amount < 0) {
       amount = 0;
     }

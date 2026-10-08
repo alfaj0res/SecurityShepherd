@@ -13,6 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.owasp.encoder.Encode;
 import utils.FindXSS;
 import utils.Hash;
 import utils.ShepherdLogManager;
@@ -79,7 +80,7 @@ public class XssChallengeFive extends HttpServlet {
           String userPost = new String();
           String searchTerm = request.getParameter("searchTerm");
           log.debug("User Submitted - " + searchTerm);
-          searchTerm = XssFilter.badUrlValidate(searchTerm);
+          searchTerm = Encode.forHtml(XssFilter.badUrlValidate(searchTerm));
           userPost = "<a href=\"" + searchTerm + "\">Your HTTP Link!</a>";
           log.debug("After WhiteListing - " + searchTerm);
 

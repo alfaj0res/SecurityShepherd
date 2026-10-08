@@ -70,7 +70,10 @@ public class UrlAccess2Admin extends HttpServlet {
 
       try {
         String userData = request.getParameter("adminData");
-        boolean tamperedRequest = !userData.equalsIgnoreCase("youAreAnAdminOfAwesomenessWoopWoop");
+        // This is an admin function: callers without the admin role are refused
+        boolean tamperedRequest =
+            !Validate.validateAdminSession(ses)
+                || !userData.equalsIgnoreCase("youAreAnAdminOfAwesomenessWoopWoop");
         if (!tamperedRequest) {
           log.debug("No request tampering detected");
         } else {

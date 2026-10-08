@@ -11,7 +11,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import utils.Hash;
 import utils.ShepherdLogManager;
 import utils.Validate;
 
@@ -74,21 +73,18 @@ public class PoorValidationLesson extends HttpServlet {
         log.debug("User Submitted - " + userData);
         String htmlOutput = new String();
         int userNumber = Integer.parseInt(userData);
+        // Validate on the server too: client side validation can be bypassed
         if (userNumber < 0) {
-          // Get key and add it to the output
-          String userKey =
-              Hash.generateUserSolution(levelResult, (String) ses.getAttribute("userName"));
-          log.debug("Negative Number Submitted");
           htmlOutput =
               "<h2 class='title'>"
-                  + bundle.getString("result.validationBypassed")
+                  + bundle.getString("response.invalidNumber")
                   + "</h2><p>"
-                  + bundle.getString("result.youDidIt")
-                  + ". "
-                  + bundle.getString("result.resultKey")
-                  + ": <a>"
-                  + userKey
-                  + "</a></p>";
+                  + bundle.getString("response.theNumber")
+                  + " "
+                  + userNumber
+                  + " "
+                  + bundle.getString("response.notValid")
+                  + ".";
         } else {
           log.debug("Valid Number Submitted");
           htmlOutput =

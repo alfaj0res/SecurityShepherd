@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 import java.util.Scanner;
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -81,7 +82,15 @@ public class CsrfChallengeTargetJSON extends HttpServlet {
         String plusId = (String) json.get("userId");
         log.debug("User Submitted - " + plusId);
         String userId = (String) ses.getAttribute("userStamp");
-        if (!userId.equals(plusId)) {
+        // Cross-site forms can't send application/json, and the anti-CSRF token from the
+        // victim's cookie must be echoed in the body
+        String contentType = request.getContentType();
+        boolean isJson =
+            contentType != null && contentType.toLowerCase().startsWith("application/json");
+        Cookie tokenCookie = Validate.getToken(request.getCookies());
+        boolean validCsrfToken =
+            Validate.validateTokens(tokenCookie, json.optString("csrfToken", null));
+        if (!userId.equals(plusId) && isJson && validCsrfToken) {
           String ApplicationRoot = getServletContext().getRealPath("");
           String userName = (String) ses.getAttribute("userName");
           String attackerName = Getter.getUserName(ApplicationRoot, plusId);

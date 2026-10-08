@@ -130,8 +130,9 @@ public class XxeChallenge1OldWebService extends HttpServlet {
     Document doc;
     String result;
 
+    // DOCTYPEs disallowed; no external entities, external DTDs, XInclude or entity expansion
     DocumentBuilder dBuilder =
-        XmlDocumentBuilder.xmlDocBuilder(false, true, true, true, true, true);
+        XmlDocumentBuilder.xmlDocBuilder(true, false, false, false, false, false);
     InputSource is = new InputSource(xmlEmail);
 
     try {

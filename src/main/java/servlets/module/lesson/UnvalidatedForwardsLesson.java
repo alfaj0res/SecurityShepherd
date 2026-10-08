@@ -115,12 +115,14 @@ public class UnvalidatedForwardsLesson extends HttpServlet {
               }
               String csrfAttack = csrfUrl.getQuery().substring(csrfStart, csrfEnd);
               log.debug("csrfAttack Found to be: " + csrfAttack);
+              // The redirect function only forwards to local relative paths
               validAttack =
-                  FindXSS.findCsrfAttackUrl(
-                      csrfAttack,
-                      "/root/grantComplete/unvalidatedredirectlesson",
-                      "userId",
-                      tempId);
+                  Redirect.isSafeRedirect(csrfAttack)
+                      && FindXSS.findCsrfAttackUrl(
+                          csrfAttack,
+                          "/root/grantComplete/unvalidatedredirectlesson",
+                          "userId",
+                          tempId);
             }
           } catch (MalformedURLException e) {
             log.error("Invalid URL: " + e.toString());

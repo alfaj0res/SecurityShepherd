@@ -83,7 +83,9 @@ public class SessionManagementLesson extends HttpServlet {
         if (theCookie != null) {
           log.debug("Cookie value: " + theCookie.getValue());
 
-          if (theCookie.getValue().equals("lessonComplete")) {
+          // Completion state is kept server-side in the session. The client "lessonComplete"
+          // cookie is not trusted.
+          if ("lessonComplete".equals(ses.getAttribute("sessionManagementLessonState"))) {
             log.debug("Lesson Complete");
 
             // Get key and add it to the output

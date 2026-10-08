@@ -13,6 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.owasp.encoder.Encode;
 import utils.FindXSS;
 import utils.Hash;
 import utils.ShepherdLogManager;
@@ -77,7 +78,7 @@ public class XssChallengeOne extends HttpServlet {
         if (Validate.validateTokens(tokenCookie, tokenParmeter)) {
           String searchTerm = request.getParameter("searchTerm");
           log.debug("User Submitted - " + searchTerm);
-          searchTerm = XssFilter.levelOne(searchTerm);
+          searchTerm = Encode.forHtml(XssFilter.levelOne(searchTerm));
           log.debug("After Filtering - " + searchTerm);
           String htmlOutput = new String();
           if (FindXSS.search(searchTerm)) {

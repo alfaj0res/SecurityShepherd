@@ -1,5 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"
-	language="java" import="utils.*" errorPage=""%>
+	language="java" import="utils.*, dbProcs.Database, java.sql.*" errorPage=""%>
 <%@ page import="java.util.Locale, java.util.ResourceBundle"%>
 <%
 /**
@@ -52,6 +52,32 @@ if (request.getSession() != null)
 	if (Validate.validateSession(ses) && tokenCookie != null)
 	{
 		ShepherdLogManager.logEvent(request.getRemoteAddr(), request.getHeader("X-Forwarded-For"), levelName + " has been accessed by " + ses.getAttribute("userName").toString(), ses.getAttribute("userName"));
+		//Coupon check, done on the server so no coupon data or keys are sent to the browser
+		String checkCouponCode = request.getParameter("checkCouponCode");
+		if ("POST".equalsIgnoreCase(request.getMethod()) && checkCouponCode != null)
+		{
+			boolean validCoupon = false;
+			try
+			{
+				Connection conn = Database.getChallengeConnection(getServletContext().getRealPath(""), "CryptoChallengeShop");
+				try
+				{
+					PreparedStatement prepstmt = conn.prepareStatement("SELECT couponId FROM coupons WHERE couponCode = ?");
+					prepstmt.setString(1, checkCouponCode);
+					validCoupon = prepstmt.executeQuery().next();
+				}
+				finally
+				{
+					conn.close();
+				}
+			}
+			catch(SQLException e)
+			{
+				ShepherdLogManager.logEvent(request.getRemoteAddr(), request.getHeader("X-Forwarded-For"), levelName +".jsp: Coupon check failed: " + e.toString());
+			}
+			out.print(validCoupon);
+			return;
+		}
 %>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>

@@ -3,11 +3,14 @@ package servlets.module.challenge;
 import dbProcs.Database;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -16,6 +19,7 @@ import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.owasp.encoder.Encode;
+import utils.Hash;
 import utils.ShepherdLogManager;
 import utils.Validate;
 
@@ -50,6 +54,36 @@ public class SessionManagement5SetToken extends HttpServlet {
   private static final Logger log = LogManager.getLogger(SessionManagement5SetToken.class);
   private static String levelName = "SessionManagement5SetToken";
   public static String levelHash = SessionManagement5.levelHash;
+
+  // Reset tokens are random, bound to a user name and only delivered to that user's email address
+  private static final long TOKEN_LIFETIME_MILLIS = 10 * 60 * 1000;
+  private static final Map<String, String[]> resetTokens =
+      new ConcurrentHashMap<String, String[]>();
+
+  /**
+   * Checks a password reset token against the one issued for the user
+   *
+   * @param userName User the token was issued for
+   * @param token Token submitted by the client
+   * @return True if the token was issued for this user in the last 10 minutes
+   */
+  public static boolean isValidResetToken(String userName, String token) {
+    String[] issued = resetTokens.get(userName);
+    if (issued == null || token == null || token.isEmpty()) {
+      return false;
+    }
+    boolean fresh = System.currentTimeMillis() - Long.parseLong(issued[1]) < TOKEN_LIFETIME_MILLIS;
+    return fresh && MessageDigest.isEqual(issued[0].getBytes(), token.getBytes());
+  }
+
+  /**
+   * Removes the reset token issued for a user so it can't be used again
+   *
+   * @param userName User the token was issued for
+   */
+  public static void invalidateResetToken(String userName) {
+    resetTokens.remove(userName);
+  }
 
   /**
    * Used to apparently send a message to a user with a token to reset their password.
@@ -109,6 +143,10 @@ public class SessionManagement5SetToken extends HttpServlet {
         ResultSet resultSet = callstmt.executeQuery();
         // Is the username valid?
         if (resultSet.next()) {
+          // Issue a new token. It is sent to the user's email address and never to the requester
+          resetTokens.put(
+              resultSet.getString(1),
+              new String[] {Hash.randomString(), Long.toString(System.currentTimeMillis())});
           log.debug("User found");
           htmlOutput =
               bundle.getString("setToken.sentTo.1")

@@ -9,7 +9,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
+import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
@@ -49,6 +51,10 @@ public class SessionManagement7SecretQuestion extends HttpServlet {
   private static String levelName = "Session Management Challenge 7 (Secret Question)";
   private static String levelHash =
       "269d55bc0e0ff635dcaeec8533085e5eae5d25e8646dcd4b05009353c9cf9c80";
+  // Wrong answers allowed per player before further answers are refused (stops brute forcing the
+  // small answer space)
+  private static final int MAX_BAD_ANSWERS = 2;
+  private static final Map<String, Integer> badAnswers = new ConcurrentHashMap<String, Integer>();
   // To catch most requests before calling the DB, the in comming Answers must be one of the
   // following flowers
   private static String possibleAnswers[] = {
@@ -105,7 +111,17 @@ public class SessionManagement7SecretQuestion extends HttpServlet {
           log.debug("Submitted answer is a possible valid answer");
           String ApplicationRoot = getServletContext().getRealPath("");
           try {
-            if (Validate.isValidEmailAddress(subEmail) && subAns.length() > 5) {
+            String player = (String) ses.getAttribute("userName");
+            Integer playerBadAnswers = badAnswers.get(player);
+            if (playerBadAnswers != null && playerBadAnswers >= MAX_BAD_ANSWERS) {
+              log.error("Too many bad answers submitted by " + player);
+              htmlOutput =
+                  "<h2 class='title'>"
+                      + bundle.getString("question.badAnswer")
+                      + "</h2><p>"
+                      + bundle.getString("question.whoAreYou")
+                      + "</p>";
+            } else if (Validate.isValidEmailAddress(subEmail) && subAns.length() > 5) {
               Connection conn =
                   Database.getChallengeConnection(
                       ApplicationRoot, "BrokenAuthAndSessMangChalFlowers");
@@ -138,6 +154,7 @@ public class SessionManagement7SecretQuestion extends HttpServlet {
                         + "</p>";
               } else {
                 log.debug("Bad Answer Submitted");
+                badAnswers.merge(player, 1, Integer::sum);
                 htmlOutput =
                     new String(
                         "<h2 class='title'>"

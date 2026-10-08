@@ -6,6 +6,8 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import javax.servlet.ServletException;
@@ -42,6 +44,8 @@ public class DirectObject1 extends HttpServlet {
 
   private static final long serialVersionUID = 1L;
   private static final Logger log = LogManager.getLogger(DirectObject1.class);
+  // Profiles that players are allowed to view. Other ids (such as hidden users) are refused.
+  private static final List<String> VIEWABLE_PROFILES = Arrays.asList("1", "3", "5", "7", "9");
   private static String levelName = "Insecure Direct Object Challenge Challenge One";
   public static String levelHash =
       "o9a450a64cc2a196f55878e2bd9a27a72daea0f17017253f87e7ebd98c71c98c";
@@ -83,7 +87,8 @@ public class DirectObject1 extends HttpServlet {
             Database.getChallengeConnection(ApplicationRoot, "directObjectRefChalOne");
         PreparedStatement prepstmt =
             conn.prepareStatement("SELECT userName, privateMessage FROM users WHERE userId = ?");
-        prepstmt.setString(1, userId);
+        // Binding NULL matches no row, so an unlisted id gets the "not found" response
+        prepstmt.setString(1, VIEWABLE_PROFILES.contains(userId) ? userId : null);
         ResultSet resultSet = prepstmt.executeQuery();
         if (resultSet.next()) {
           log.debug("Found user: " + resultSet.getString(1));

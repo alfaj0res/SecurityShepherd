@@ -165,11 +165,12 @@ public class SessionManagement6 extends HttpServlet {
               resultSet = callstmt.executeQuery();
               if (resultSet.next()) {
                 log.debug("User Found");
+                // Don't disclose the account's email address
                 userAddress =
                     ""
                         + bundle.getString("response.badPass")
                         + " <a>"
-                        + Encode.forHtml(resultSet.getString(1))
+                        + Encode.forHtml(subName)
                         + "</a><br/>";
               } else {
                 userAddress = "" + bundle.getString("response.badUser") + "<br/>";

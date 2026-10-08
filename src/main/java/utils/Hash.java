@@ -1,9 +1,12 @@
 package utils;
 
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import javax.crypto.Cipher;
 import javax.crypto.Mac;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,6 +33,10 @@ public class Hash {
 
   private static final Logger log = LogManager.getLogger(Hash.class);
   private static byte[] serverEncryptionKey = randomKeyBytes();
+  // Separate random AES key used only to encrypt values shown to clients. It never leaves the
+  // server
+  private static final SecretKeySpec displayEncryptionKey =
+      new SecretKeySpec(randomKeyBytes(), "AES");
 
   /**
    * Generates HMAC with servers random encryption key on user name concatenated with level's base
@@ -87,6 +94,49 @@ public class Hash {
       log.error("Encrypt Failure: " + e.toString());
     }
     return toReturn;
+  }
+
+  /**
+   * Encrypts a value with AES-GCM under a random key that only exists in server memory. The output
+   * (Base64 of IV and ciphertext) can be shown to clients without revealing the value.
+   *
+   * @param plainText Value to encrypt
+   * @return Base64 encoded IV and ciphertext
+   */
+  public static String encryptWithServerKey(String plainText) {
+    try {
+      byte[] iv = new byte[12];
+      new SecureRandom().nextBytes(iv);
+      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+      cipher.init(Cipher.ENCRYPT_MODE, displayEncryptionKey, new GCMParameterSpec(128, iv));
+      byte[] cipherText = cipher.doFinal(plainText.getBytes("UTF-8"));
+      byte[] output = new byte[iv.length + cipherText.length];
+      System.arraycopy(iv, 0, output, 0, iv.length);
+      System.arraycopy(cipherText, 0, output, iv.length, cipherText.length);
+      return java.util.Base64.getEncoder().encodeToString(output);
+    } catch (Exception e) {
+      log.error("Could not encrypt value: " + e.toString());
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Decrypts a value produced by {@link #encryptWithServerKey(String)}. Tampered or foreign values
+   * fail the GCM integrity check and are rejected.
+   *
+   * @param encrypted Base64 encoded IV and ciphertext
+   * @return The decrypted value
+   * @throws GeneralSecurityException If the value was not produced with the server key
+   */
+  public static String decryptWithServerKey(String encrypted) throws GeneralSecurityException {
+    byte[] input = java.util.Base64.getDecoder().decode(encrypted.trim());
+    if (input.length < 12 + 16) {
+      throw new GeneralSecurityException("Encrypted value too short");
+    }
+    Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+    cipher.init(Cipher.DECRYPT_MODE, displayEncryptionKey, new GCMParameterSpec(128, input, 0, 12));
+    byte[] plainText = cipher.doFinal(input, 12, input.length - 12);
+    return new String(plainText, java.nio.charset.StandardCharsets.UTF_8);
   }
 
   public static byte[] getCurrentKey() {

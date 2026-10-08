@@ -3,12 +3,8 @@ package servlets.module.challenge;
 import dbProcs.Database;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import javax.servlet.ServletException;
@@ -16,7 +12,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import utils.ShepherdLogManager;
@@ -56,7 +51,7 @@ public class SessionManagement5ChangePassword extends HttpServlet {
    *
    * @param userName User cookie used to store the user password to be reset
    * @param newPassword the password which to use to update an accounts password
-   * @param resetPasswordToken Base64'd time stamp
+   * @param resetPasswordToken Random token issued to the user by SessionManagement5SetToken
    */
   public void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
@@ -102,32 +97,16 @@ public class SessionManagement5ChangePassword extends HttpServlet {
         log.debug("userName = " + userName);
         log.debug("newPass = " + newPass);
         log.debug("token = " + token);
-        String tokenTime = new String();
-        try {
-          byte[] decodedToken = Base64.decodeBase64(token);
-          tokenTime = new String(decodedToken, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-          log.debug("Could not decode password token");
-          errorMessage += "<p>" + bundle.getString("changePass.noDecode") + "</p>";
-        }
-        if (tokenTime.isEmpty()) {
-          log.debug("Could not decode token. Ending Servlet.");
+        if (token.isEmpty()) {
           out.write(errorMessage);
         } else {
-          log.debug("Decoded Token = " + tokenTime);
 
-          // Get Time from Token and see if it is inside the last 10 minutes
-          SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE MMM d HH:mm:ss Z yyyy");
-          try {
-            Date tokenDateTime = simpleDateFormat.parse(tokenTime);
-            Date currentDateTime = new Date();
-            // Get difference in minutes
-            tokenLife =
-                (int) ((currentDateTime.getTime() / 60000) - (tokenDateTime.getTime() / 60000));
-            log.debug("Token life = " + tokenLife);
-          } catch (ParseException e) {
-            log.error("Date Parsing Error: " + e.toString());
-            errorMessage += bundle.getString("changePass.badTokenData") + ": " + e.toString();
+          // The token must be the random value issued to this user by SessionManagement5SetToken
+          if (SessionManagement5SetToken.isValidResetToken(userName, token)) {
+            tokenLife = 0;
+          } else {
+            log.error("Invalid reset token submitted for user: " + userName);
+            errorMessage += bundle.getString("changePass.badTokenData");
           }
 
           if (tokenLife < 10 && tokenLife >= 0) {
@@ -156,6 +135,8 @@ public class SessionManagement5ChangePassword extends HttpServlet {
               callstmt = conn.prepareStatement("COMMIT");
               callstmt.execute();
               log.debug("Changes committed.");
+              // Tokens are single use
+              SessionManagement5SetToken.invalidateResetToken(userName);
 
               htmlOutput = "<p>" + bundle.getString("changePass.success") + "</p>";
             } else {

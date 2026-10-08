@@ -15,7 +15,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.owasp.encoder.Encode;
 import utils.Hash;
 import utils.ShepherdLogManager;
 import utils.Validate;
@@ -108,13 +107,13 @@ public class SessionManagement2ChangePassword extends HttpServlet {
           callstmt.execute();
           log.debug("Changes committed.");
 
-          htmlOutput = Encode.forHtml(newPassword);
           Database.closeConnection(conn);
         } catch (SQLException e) {
           log.error(levelName + " SQL Error: " + e.toString());
         }
         log.debug("Outputting HTML");
-        out.write(bundle.getString("response.changedTo") + " " + htmlOutput);
+        // The new password is delivered to the account's email address, never to the requester
+        out.write(bundle.getString("response.resetSent"));
       } catch (Exception e) {
         out.write(errors.getString("error.funky"));
         log.fatal(levelName + " - " + e.toString());

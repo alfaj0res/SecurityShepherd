@@ -158,6 +158,8 @@ public class SessionManagement3 extends HttpServlet {
             }
           } else {
             log.debug("Successful Guest Login");
+            // Remember which level account this session signed in as
+            ses.setAttribute("sessionManagement3User", resultSet.getString(1));
             htmlOutput =
                 makeTable(bundle)
                     + "<h2 class='title'>"

@@ -92,7 +92,9 @@ public class SessionManagement8 extends HttpServlet {
         if (theCookie != null) {
           log.debug("Cookie value: " + theCookie.getValue());
 
-          if (theCookie.getValue().equals("nmHqLjQknlHs")) {
+          // The role is kept server-side in the session. The client "challengeRole" cookie is not
+          // trusted, and nothing in this level grants the super user role.
+          if ("superUser".equals(ses.getAttribute("sessionManagement8Role"))) {
             log.debug("Super User Cookie detected");
             // Get key and add it to the output
             String userKey =

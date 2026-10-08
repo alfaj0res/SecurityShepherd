@@ -94,10 +94,13 @@ public class SessionManagement4 extends HttpServlet {
           decodedCookieBytes = Base64.decodeBase64(decodedCookie.getBytes());
           decodedCookie = new String(decodedCookieBytes, "UTF-8");
           log.debug("Decoded Cookie: " + decodedCookie);
+          // The admin session id is kept server-side in the session. The client "SubSessionID"
+          // cookie is not trusted, and nothing in this level grants the admin session.
           if (decodedCookie.equals("0000000000000001")) // Guest Session
           {
             log.debug("Guest Session Detected");
-          } else if (decodedCookie.equals("0000000000000009")) // Admin Session
+          } else if ("0000000000000009".equals(ses.getAttribute("sessionManagement4SessionId")))
+          // Admin Session
           {
             log.debug("Admin Session Detected: Challenge Complete");
             // Get key and add it to the output

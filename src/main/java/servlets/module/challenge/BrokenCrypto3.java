@@ -12,6 +12,7 @@ import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.owasp.encoder.Encode;
+import utils.Hash;
 import utils.ShepherdLogManager;
 import utils.Validate;
 
@@ -73,7 +74,9 @@ public class BrokenCrypto3 extends HttpServlet {
 
         log.debug("Decrypting user input");
         // Using level key as encryption key
-        String decryptedUserData = decrypt(userData, levelResult);
+        // Data is decrypted with a random AES-GCM key that only exists on the server. The result
+        // key is no longer used as the encryption key
+        String decryptedUserData = Hash.decryptWithServerKey(userData);
         log.debug("Decrypted to: " + decryptedUserData);
 
         htmlOutput =

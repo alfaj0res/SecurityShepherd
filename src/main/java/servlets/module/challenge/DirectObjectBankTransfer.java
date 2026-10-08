@@ -82,8 +82,12 @@ public class DirectObjectBankTransfer extends HttpServlet {
         float tranferAmount = Float.parseFloat(transferAmountString);
 
         // Data Validation
-        // Positive Transfer Amount?
-        if (tranferAmount > 0) {
+        // Sender must be the account signed into this bank session
+        String sessionAccount = (String) ses.getAttribute("directObjectBankAccount");
+        if (sessionAccount == null || !sessionAccount.equals(senderAccountNumber)) {
+          log.error("Transfer refused: sender account is not the signed in account");
+        } else if (tranferAmount > 0) {
+          // Positive Transfer Amount?
           // Sender Account Has necessary funds?
           long senderFunds =
               DirectObjectBankLogin.getAccountBalance(senderAccountNumber, applicationRoot);

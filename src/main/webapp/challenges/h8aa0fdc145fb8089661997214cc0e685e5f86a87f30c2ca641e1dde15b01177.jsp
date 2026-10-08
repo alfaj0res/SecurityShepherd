@@ -1,5 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"
-	language="java" import="utils.*" errorPage=""%>
+	language="java" import="utils.*, dbProcs.Getter" errorPage=""%>
 <%@ page import="java.util.Locale, java.util.ResourceBundle"%>
 <%
 /**
@@ -24,6 +24,7 @@
  */
 
 String levelName = "Insecure Cryptographic Storage Challenge 2";
+String levelHash = "h8aa0fdc145fb8089661997214cc0e685e5f86a87f30c2ca641e1dde15b01177";
  
  //Translation Stuff
  Locale locale = new Locale(Validate.validateLanguage(request.getSession()));
@@ -49,6 +50,17 @@ String levelName = "Insecure Cryptographic Storage Challenge 2";
  	if (Validate.validateSession(ses) && tokenCookie != null)
  	{
  		ShepherdLogManager.logEvent(request.getRemoteAddr(), request.getHeader("X-Forwarded-For"), levelName + " has been accessed by " + ses.getAttribute("userName").toString(), ses.getAttribute("userName"));
+		//Key check, done on the server so the key is never sent to the browser
+		String resultKeyAttempt = request.getParameter("resultKeyAttempt");
+		if ("POST".equalsIgnoreCase(request.getMethod()) && resultKeyAttempt != null)
+		{
+			String levelResult = Getter.getModuleResultFromHash(getServletContext().getRealPath(""), levelHash);
+			if (resultKeyAttempt.equals(levelResult))
+				out.print("<p>Yeah, that's correct</p>");
+			else
+				out.print("<p>No, that's not correct</p>");
+			return;
+		}
 %>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -87,56 +99,18 @@ String levelName = "Insecure Cryptographic Storage Challenge 2";
 	</div>
 	<script>			
 		$("#leForm").submit(function(){
-			// <%= bundle.getString("insecureCryptoStorage.2.hint") %>
+			// The key is checked on the server. No key material is sent to the browser
 			var input = $("#resultKeyAttempt").val();
-			theKey = "kpoisaijdieyjaf";
-			var theAlphabet =   "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "abcdefghijklmnopqrstuvwxyz";
-
-			// <%= bundle.getString("insecureCryptoStorage.2.commentedCode.1") %>
-			theKey = theKey.toUpperCase();
-			var theKeysLength = theKey.length;
-			var i;
-			var adjustedKey = "";
-			for(i = 0; i < theKeysLength; i ++)
-			{
-				var currentKeyChar = theAlphabet.indexOf(theKey.charAt(i));
-				if(currentKeyChar < 0)
-					continue;
-				adjustedKey += theAlphabet.charAt(currentKeyChar);
-			}
-			theKey = adjustedKey;
-			theKeysLength = theKey.length;
-
-			// <%= bundle.getString("insecureCryptoStorage.2.commentedCode.2") %>
-			var inputLength = input.length;
-			var output = "";
-			var theKeysCurrentIndex = 0;
-			for(i = 0; i < inputLength; i ++)
-			{
-				var currentChar = input.charAt(i);
-				var currentCharValue = theAlphabet.indexOf(currentChar);
-				if(currentCharValue < 0)
-				{
-					output += currentChar;
-					continue;
-				}
-				var lowercase = currentCharValue >= 26 ? true : false;
-				currentCharValue += theAlphabet.indexOf(theKey.charAt(theKeysCurrentIndex));
-				currentCharValue += 26;
-				if(lowercase)
-					currentCharValue = currentCharValue % 26 + 26;
-				else
-					currentCharValue %= 26;
-				output += theAlphabet.charAt(currentCharValue);
-				theKeysCurrentIndex =(theKeysCurrentIndex + 1) % theKeysLength;
-			}
-			
-			// <%= bundle.getString("insecureCryptoStorage.2.commentedCode.3") %>
 			$("#resultDiv").hide("fast", function(){
-				if(output == "DwsDagmwhziArpmogWaSmmckwhMoEsmgmxlivpDttfjbjdxqBwxbKbCwgwgUyam")
-					$('#resultDiv').html("<p>Yeah, that's correct</p>");
-				else
-					$('#resultDiv').html("<p>No, that's not correct</p>");
+				var ajaxCall = $.ajax({
+					type: "POST",
+					url: "h8aa0fdc145fb8089661997214cc0e685e5f86a87f30c2ca641e1dde15b01177.jsp",
+					data: {
+						resultKeyAttempt: input
+					},
+					async: false
+				});
+				$('#resultDiv').html(ajaxCall.responseText);
 				$("#resultDiv").show("slow");
 			});
 			// <%= bundle.getString("insecureCryptoStorage.2.commentedCode.4") %>
