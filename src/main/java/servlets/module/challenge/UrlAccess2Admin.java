@@ -70,10 +70,13 @@ public class UrlAccess2Admin extends HttpServlet {
 
       try {
         String userData = request.getParameter("adminData");
-        // This is an admin function: callers without the admin role are refused
+        // ASVS 8.2.1 / 8.3.1: deny by default. This admin function needs an explicit permission for
+        // this sub application, held server-side in the session. Knowing the (hidden) URL or the
+        // request data grants nothing, and the platform role is not a grant for this function.
+        // Nothing in this level grants the permission to players.
+        boolean hasPermission = "admin".equals(ses.getAttribute("urlAccess2SubAppRole"));
         boolean tamperedRequest =
-            !Validate.validateAdminSession(ses)
-                || !userData.equalsIgnoreCase("youAreAnAdminOfAwesomenessWoopWoop");
+            !hasPermission || !userData.equalsIgnoreCase("youAreAnAdminOfAwesomenessWoopWoop");
         if (!tamperedRequest) {
           log.debug("No request tampering detected");
         } else {
@@ -98,7 +101,7 @@ public class UrlAccess2Admin extends HttpServlet {
         } else {
           htmlOutput =
               "<h2 class='title'>"
-                  + bundle.getString("response.failue")
+                  + bundle.getString("response.failure")
                   + "</h2>"
                   + "<p>"
                   + bundle.getString("response.failue.message")

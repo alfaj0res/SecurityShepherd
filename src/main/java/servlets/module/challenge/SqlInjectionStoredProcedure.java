@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
 import java.util.ResourceBundle;
+import java.util.regex.Pattern;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -43,6 +44,10 @@ public class SqlInjectionStoredProcedure extends HttpServlet {
   // SQL Challenge One
   private static final long serialVersionUID = 1L;
   private static final Logger log = LogManager.getLogger(SqlInjectionStoredProcedure.class);
+  // ASVS 2.2.1: positive (allow list) validation of the email address the search expects
+  private static final Pattern EMAIL_ALLOW_LIST =
+      Pattern.compile("^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,63}\\.[A-Za-z]{2,24}$");
+  private static final int MAX_ADDRESS_LENGTH = 128; // customerAddress / findUser(VARCHAR(128))
   private static String levelName = "SQL Injection Stored Procedure Challenge";
   public static String levelHash =
       "7edcbc1418f11347167dabb69fcb54137960405da2f7a90a0684f86c4d45a2e7";
@@ -76,10 +81,18 @@ public class SqlInjectionStoredProcedure extends HttpServlet {
         String ApplicationRoot = getServletContext().getRealPath("");
 
         log.debug("Getting Connection to Database");
+        // ASVS 2.2.1 / 2.2.2: validate on the server before the value reaches the database
+        if (userIdentity == null
+            || userIdentity.length() > MAX_ADDRESS_LENGTH
+            || !EMAIL_ALLOW_LIST.matcher(userIdentity).matches()) {
+          log.debug("Rejected input that is not a valid email address");
+          out.write("<p>" + bundle.getString("response.noResults") + "</p>");
+          return;
+        }
         Connection conn =
             Database.getChallengeConnection(ApplicationRoot, "SqlChallengeStoredProc");
-        // CallableStatement callstmt = conn.prepareCall("CALL findUser('" + userIdentity + "');");
-        CallableStatement stmt = conn.prepareCall("CALL findUser(?)");
+        // ASVS 1.2.4: the stored procedure is called with a bound parameter, never concatenated
+        CallableStatement stmt = conn.prepareCall("{call findUser(?)}");
         stmt.setString(1, userIdentity);
         ResultSet resultSet = stmt.executeQuery();
 
@@ -113,14 +126,9 @@ public class SqlInjectionStoredProcedure extends HttpServlet {
           htmlOutput = "<p>" + bundle.getString("response.noResults") + "</p>";
         }
       } catch (SQLException e) {
-        log.debug("SQL Error caught - " + e.toString());
-        htmlOutput +=
-            "<p>"
-                + errors.getString("error.detected")
-                + "</p>"
-                + "<p>"
-                + Encode.forHtml(e.toString())
-                + "</p>";
+        // ASVS 16.5.1: details are logged, the client only gets a generic message
+        log.error(levelName + " SQL Error - " + e.toString());
+        htmlOutput = "<p>" + errors.getString("error.funky") + "</p>";
       } catch (Exception e) {
         out.write(errors.getString("error.funky"));
         log.fatal(levelName + " - " + e.toString());
