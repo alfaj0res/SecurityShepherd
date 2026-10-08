@@ -1,6 +1,8 @@
 package utils;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.servlet.http.Cookie;
@@ -28,6 +30,7 @@ import org.apache.logging.log4j.Logger;
  */
 public class Validate {
 
+  private static final String SESSION_CSRF_TOKEN = "sessionCsrfToken";
   private static final Logger log = LogManager.getLogger(Validate.class);
 
   /**
@@ -435,6 +438,48 @@ public class Validate {
    * @param requestToken CSRF request Token
    * @return A boolean value stating weather or not the tokens are valid
    */
+  /**
+   * Returns the anti-CSRF synchronizer token for this session, creating it if needed. The token is
+   * kept server-side in the session, so it can't be planted by an attacker through a cookie (ASVS
+   * 3.5.1, OWASP CSRF Cheat Sheet: synchronizer token pattern).
+   *
+   * @param ses The user's session
+   * @return The session's anti-CSRF token
+   */
+  public static String getSessionCsrfToken(HttpSession ses) {
+    synchronized (ses) {
+      Object token = ses.getAttribute(SESSION_CSRF_TOKEN);
+      if (token == null) {
+        token = Hash.randomString();
+        ses.setAttribute(SESSION_CSRF_TOKEN, token);
+      }
+      return token.toString();
+    }
+  }
+
+  /**
+   * Validates a submitted anti-CSRF token against the synchronizer token held in the session. The
+   * comparison is constant time. Missing tokens fail closed.
+   *
+   * @param ses The user's session
+   * @param requestToken Token submitted with the request
+   * @return True only if the submitted token matches the session's token
+   */
+  public static boolean validateSessionCsrfToken(HttpSession ses, Object requestToken) {
+    if (ses == null || requestToken == null || ses.getAttribute(SESSION_CSRF_TOKEN) == null) {
+      log.error("Anti-CSRF token missing");
+      return false;
+    }
+    boolean result =
+        MessageDigest.isEqual(
+            ses.getAttribute(SESSION_CSRF_TOKEN).toString().getBytes(StandardCharsets.UTF_8),
+            requestToken.toString().getBytes(StandardCharsets.UTF_8));
+    if (!result) {
+      log.error("Anti-CSRF token did not match the session token");
+    }
+    return result;
+  }
+
   public static boolean validateTokens(Cookie cookieToken, Object requestToken) {
     boolean result = false;
     boolean cookieNull = (cookieToken == null);

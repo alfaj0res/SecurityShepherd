@@ -98,13 +98,13 @@ public class SqlInjectionStoredProcedure extends HttpServlet {
 
         int i = 0;
         htmlOutput = "<h2 class='title'>" + bundle.getString("response.searchResults") + "</h2>";
+        // ASVS 14.2.6 / 8.2.3: only the fields the lookup needs are returned. The internal customer
+        // comment is never sent to the client
         htmlOutput +=
             "<table><tr><th>"
                 + bundle.getString("response.table.name")
                 + "</th><th>"
                 + bundle.getString("response.table.address")
-                + "</th><th>"
-                + bundle.getString("response.table.comment")
                 + "</th></tr>";
 
         log.debug("Opening Result Set from query");
@@ -115,8 +115,6 @@ public class SqlInjectionStoredProcedure extends HttpServlet {
                   + Encode.forHtml(resultSet.getString(2))
                   + "</td><td>"
                   + Encode.forHtml(resultSet.getString(3))
-                  + "</td><td>"
-                  + Encode.forHtml(resultSet.getString(4))
                   + "</td></tr>";
           i++;
         }

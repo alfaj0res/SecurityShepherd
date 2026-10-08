@@ -7,7 +7,6 @@ import java.io.PrintWriter;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -47,7 +46,8 @@ public class CsrfChallengeTargetOne extends HttpServlet {
    *
    * @param userId User identifier to be incremented
    */
-  public void doGet(HttpServletRequest request, HttpServletResponse response)
+  // ASVS 3.5.3: state changing function only accepts POST (GET now gets 405 from HttpServlet)
+  public void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     // Setting IpAddress To Log and taking header for original IP if forwarded from proxy
     ShepherdLogManager.setRequestIp(request.getRemoteAddr(), request.getHeader("X-Forwarded-For"));
@@ -73,9 +73,9 @@ public class CsrfChallengeTargetOne extends HttpServlet {
         String plusId = request.getParameter("userid");
         log.debug("User Submitted - " + plusId);
         String userId = (String) ses.getAttribute("userStamp");
-        Cookie tokenCookie = Validate.getToken(request.getCookies());
+        // ASVS 3.5.1: synchronizer token held in the session, not a cookie an attacker can plant
         boolean validCsrfToken =
-            Validate.validateTokens(tokenCookie, request.getParameter("csrfToken"));
+            Validate.validateSessionCsrfToken(ses, request.getParameter("csrfToken"));
         if (!userId.equals(plusId) && validCsrfToken) {
           String ApplicationRoot = getServletContext().getRealPath("");
           String userName = (String) ses.getAttribute("userName");

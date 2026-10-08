@@ -7,7 +7,6 @@ import java.io.PrintWriter;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -73,9 +72,9 @@ public class CsrfChallengeTargetTwo extends HttpServlet {
         String plusId = request.getParameter("userId");
         log.debug("User Submitted - " + plusId);
         String userId = (String) ses.getAttribute("userStamp");
-        Cookie tokenCookie = Validate.getToken(request.getCookies());
+        // ASVS 3.5.1: synchronizer token held in the session, not a cookie an attacker can plant
         boolean validCsrfToken =
-            Validate.validateTokens(tokenCookie, request.getParameter("csrfToken"));
+            Validate.validateSessionCsrfToken(ses, request.getParameter("csrfToken"));
         if (!userId.equals(plusId) && validCsrfToken) {
           String ApplicationRoot = getServletContext().getRealPath("");
           String userName = (String) ses.getAttribute("userName");
